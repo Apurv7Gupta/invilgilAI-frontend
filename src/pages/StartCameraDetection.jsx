@@ -4,24 +4,30 @@ import { useNavigate } from "react-router-dom";
 function StartCameraDetection() {
     const videoRef = useRef(null);
     const streamRef = useRef(null);
-
+    const canvasRef = useRef(null);
 
     const [cameraOn, setCameraOn] = useState(false);
+    const [count, setCount] = useState(0);
+
+    const totalImages = 10;
     const navigate = useNavigate();
 
+    // START CAMERA
     const startCamera = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: true,
             });
-            streamRef.current = stream;
+
             videoRef.current.srcObject = stream;
+            streamRef.current = stream;
             setCameraOn(true);
-        } catch (err) {
+        } catch {
             alert("Camera permission denied");
         }
     };
 
+    // STOP CAMERA ON PAGE LEAVE
     useEffect(() => {
         return () => {
             if (streamRef.current) {
@@ -31,38 +37,106 @@ function StartCameraDetection() {
         };
     }, []);
 
+    // CAPTURE IMAGE (FACE AREA)
+    const captureImage = async () => {
+        if (!videoRef.current) return;
+        if (count >= totalImages) return;
+
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext("2d");
+
+        const cropWidth = 256;
+        const cropHeight = 288;
+
+        const videoWidth = videoRef.current.videoWidth;
+        const videoHeight = videoRef.current.videoHeight;
+
+        const x = (videoWidth - cropWidth) / 2;
+        const y = (videoHeight - cropHeight) / 2;
+
+        canvas.width = cropWidth;
+        canvas.height = cropHeight;
+
+        ctx.drawImage(
+            videoRef.current,
+            x,
+            y,
+            cropWidth,
+            cropHeight,
+            0,
+            0,
+            cropWidth,
+            cropHeight
+        );
+
+        // 🔊 Beep
+        new Audio("/beep.mp3").play();
+
+        // ⬆️ UPDATE COUNT IMMEDIATELY (UI FIRST)
+        setCount(prev => prev + 1);
+
+        // ⏳ BACKEND WORK (background)
+        canvas.toBlob(async (blob) => {
+            try {
+                const formData = new FormData();
+                formData.append("image", blob);
+                formData.append("index", count + 1);
+
+                await fetch("http://localhost:8000/enroll", {
+                    method: "POST",
+                    body: formData,
+                });
+            } catch (err) {
+                console.error("Upload failed", err);
+            }
+        }, "image/jpeg");
+    };
+
+    // SPACEBAR HANDLER
+    useEffect(() => {
+        const handleKey = (e) => {
+            if (e.code === "Space" && cameraOn && count < totalImages) {
+                e.preventDefault();
+                captureImage();
+            }
+        };
+
+        window.addEventListener("keydown", handleKey);
+        return () => window.removeEventListener("keydown", handleKey);
+    }, [cameraOn, count]);
 
     return (
         <div className="min-h-screen bg-gray-950 text-white flex">
+
+            {/* HIDDEN CANVAS */}
+            <canvas ref={canvasRef} className="hidden" />
+
             {/* LEFT MAIN AREA */}
             <div className="flex-1 flex flex-col items-center justify-center relative">
 
-                {/* Back Button */}
+                {/* BACK BUTTON */}
                 <button
                     onClick={() => navigate(-1)}
-                    className="absolute top-6 left-6 bg-blue-600 p-2 rounded "
+                    className="absolute top-6 left-6 bg-blue-600 px-2 py-1 rounded font-bold"
                 >
-                    ←
+                    ⬅
                 </button>
 
-                {/* Camera Container */}
+                {/* CAMERA CONTAINER */}
                 <div className="relative w-[420px] h-[420px] bg-white rounded-xl overflow-hidden shadow-lg">
 
-                    {/* VIDEO */}
                     <video
                         ref={videoRef}
                         autoPlay
                         playsInline
-                        className={`w-full h-full object-cover ${cameraOn ? "block" : "hidden"
-                            }`}
+                        className={`w-full h-full object-cover ${cameraOn ? "block" : "hidden"}`}
                     />
 
-                    {/* FACE MASK OVERLAY */}
+                    {/* FACE FRAME */}
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <div className="w-64 h-72 border-4 border-gray-400 rounded-[40px] opacity-80"></div>
                     </div>
 
-                    {/* CAMERA OFF STATE */}
                     {!cameraOn && (
                         <div className="absolute inset-0 flex items-center justify-center text-gray-600">
                             Camera Preview
@@ -70,33 +144,40 @@ function StartCameraDetection() {
                     )}
                 </div>
 
-                {/* TEXT */}
-                <p className="mt-6 text-gray-300">
+                {/* COUNTER */}
+                <p className="mt-4 text-blue-400 font-semibold">
+                    Images: {count} / {totalImages}
+                </p>
+
+                {count === 4 && <p className="text-yellow-400">➡ Turn LEFT</p>}
+                {count === 7 && <p className="text-yellow-400">➡ Turn RIGHT</p>}
+
+                <p className="mt-2 text-gray-300">
                     Place your face inside the frame
                 </p>
 
-                {/* BUTTON */}
                 {!cameraOn && (
                     <button
                         onClick={startCamera}
-                        className="mt-4 bg-blue-600 px-6 py-3 rounded-full font-medium hover:opacity-90"
+                        className="mt-4 bg-blue-600 px-6 py-3 rounded-full font-medium"
                     >
                         ▶ Enable Camera
                     </button>
                 )}
             </div>
 
-            {/* RIGHT INSTRUCTIONS PANEL */}
+            {/* RIGHT PANEL */}
             <div className="w-80 bg-gray-200 text-black">
                 <div className="bg-blue-600 text-white text-lg p-4 font-bold text-center">
                     Instructions
                 </div>
 
                 <ul className="p-6 space-y-6 font-medium text-lg">
-                    <li>🔹 Press Spacebar after beeps </li>
-                    <li>🔹 Keep the room well lit</li>
-                    <li>🔹 Take 5 photos facing forward</li>
-                    <li>🔹 Then left, then right</li>
+                    <li>🔹 Press Spacebar after beep</li>
+                    <li>🔹 Keep room well lit</li>
+                    <li>🔹 4 photos facing forward</li>
+                    <li>🔹 3 photos facing left</li>
+                    <li>🔹 3 photos facing right</li>
                 </ul>
             </div>
         </div>
@@ -104,3 +185,4 @@ function StartCameraDetection() {
 }
 
 export default StartCameraDetection;
+

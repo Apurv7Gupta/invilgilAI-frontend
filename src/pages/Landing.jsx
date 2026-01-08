@@ -55,8 +55,8 @@ function Landing() {
                 </Link>
             ) : (
                 <Link to="/login">
-                    <button className="ml-300 px-6 py-3 rounded-full bg-blue-500 text-white font-medium hover:bg-blue-600 transition">
-                        Login to Start
+                    <button className="ml-298 px-6 py-3 rounded-full bg-blue-500 text-white font-medium hover:bg-blue-600 transition">
+                        Login to Start <span className="font-extrabold font-stretch-75% ">➔</span>
                     </button>
                 </Link>
             )}
