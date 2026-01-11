@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useAuth0 } from "@auth0/auth0-react"
 import { useNavigate } from "react-router-dom";
 const apiUrl = import.meta.env.VITE_API_URL_IDENTITY;
 
@@ -206,3 +207,4 @@ function StartCameraDetection() {
 }
 
 export default StartCameraDetection;
+
