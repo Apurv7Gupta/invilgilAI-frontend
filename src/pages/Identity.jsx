@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
-const apiUrl = import.meta.env.VITE_API_URL_IDENTITY;
+const apiURL = import.meta.env.VITE_API_URL_IDENTITY;
 
 function Identity() {
   const { user } = useAuth0();
@@ -88,7 +88,7 @@ function Identity() {
       formData.append("files", blob, `img_${nextCount}.jpg`);
 
       try {
-        const response = await fetch(`${apiUrl}/enroll`, {
+        const response = await fetch(`${apiURL}/enroll`, {
           method: "POST",
           mode: "cors", // Explicitly ask for CORS
           body: formData,
